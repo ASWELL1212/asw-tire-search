@@ -1,0 +1,9 @@
+{
+  "name": "AS WELL タイヤ検索",
+  "short_name": "タイヤ検索",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#eef3f6",
+  "theme_color": "#164e63",
+  "lang": "ja"
+}

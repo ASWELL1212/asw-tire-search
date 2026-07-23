@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#164e63">
+  <title>AS WELL タイヤ検索</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div class="brand">AS WELL</div>
+      <h1>タイヤ保管場所検索</h1>
+    </header>
+
+    <section class="search-card">
+      <label for="query">名前または車両番号</label>
+      <div class="input-row">
+        <input id="query" type="search" inputmode="search" autocomplete="off"
+               placeholder="例：安藤 / 1516" autofocus>
+        <button id="clearBtn" type="button" aria-label="入力を消す">×</button>
+      </div>
+    </section>
+
+    <section id="emptyState" class="message">
+      名前または車両番号を入力してください
+    </section>
+
+    <section id="resultCard" class="result-card hidden" aria-live="polite">
+      <div class="customer" id="customer"></div>
+      <div class="vehicle" id="vehicle"></div>
+      <div class="location-grid">
+        <div class="location-box">
+          <span class="location-label">列</span>
+          <strong id="columnValue">－</strong>
+        </div>
+        <div class="location-box">
+          <span class="location-label">番号</span>
+          <strong id="positionValue">－</strong>
+        </div>
+      </div>
+    </section>
+
+    <section id="multipleCard" class="multiple hidden">
+      <div class="multiple-title">複数見つかりました</div>
+      <div id="multipleList"></div>
+    </section>
+
+    <section id="notFound" class="message error hidden">
+      該当するタイヤが見つかりません
+    </section>
+
+    <footer>タイヤ倉庫データ 第1版</footer>
+  </main>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -4,58 +4,88 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#164e63">
-  <title>AS WELL タイヤ検索</title>
+  <title>ASW Tire Manager</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main class="app">
-    <header>
-      <div class="brand">AS WELL</div>
-      <h1>タイヤ保管場所検索</h1>
-    </header>
-
-    <section class="search-card">
-      <label for="query">名前または車両番号</label>
-      <div class="input-row">
-        <input id="query" type="search" inputmode="search" autocomplete="off"
-               placeholder="例：安藤 / 1516" autofocus>
-        <button id="clearBtn" type="button" aria-label="入力を消す">×</button>
+  <main class="app-shell">
+    <section id="loginView" class="auth-view">
+      <div class="auth-card">
+        <div class="brand">AS WELL</div>
+        <h1>ASW Tire Manager</h1>
+        <p class="sub">タイヤ保管・交換管理</p>
+        <form id="loginForm">
+          <label>メールアドレス
+            <input id="email" type="email" autocomplete="username" required>
+          </label>
+          <label>パスワード
+            <input id="password" type="password" autocomplete="current-password" required>
+          </label>
+          <button class="primary" type="submit">ログイン</button>
+        </form>
+        <div id="loginMessage" class="message"></div>
       </div>
     </section>
 
-    <section id="emptyState" class="message">
-      名前または車両番号を入力してください
-    </section>
-
-    <section id="resultCard" class="result-card hidden" aria-live="polite">
-      <div class="customer" id="customer"></div>
-      <div class="vehicle" id="vehicle"></div>
-      <div class="location-grid">
-        <div class="location-box">
-          <span class="location-label">列</span>
-          <strong id="columnValue">－</strong>
+    <section id="appView" class="hidden">
+      <header class="topbar">
+        <div>
+          <div class="brand">AS WELL</div>
+          <h1>タイヤ管理</h1>
         </div>
-        <div class="location-box">
-          <span class="location-label">番</span>
-          <strong id="positionValue">－</strong>
+        <button id="logoutBtn" class="ghost">ログアウト</button>
+      </header>
+
+      <section id="setupCard" class="setup-card hidden">
+        <h2>初期データ登録</h2>
+        <p>Excelから取り込んだ142台の保管データをFirestoreへ登録します。最初の1回だけ実行してください。</p>
+        <button id="seedBtn" class="primary">初期データを登録</button>
+        <div id="seedMessage" class="message"></div>
+      </section>
+
+      <section class="dashboard">
+        <button class="stat active" data-filter="all">
+          <span>全車両</span><strong id="countAll">0</strong>
+        </button>
+        <button class="stat" data-filter="studless">
+          <span>スタッドレス</span><strong id="countStudless">0</strong>
+        </button>
+        <button class="stat" data-filter="normal">
+          <span>ノーマル</span><strong id="countNormal">0</strong>
+        </button>
+        <button class="stat" data-filter="unset">
+          <span>未設定</span><strong id="countUnset">0</strong>
+        </button>
+      </section>
+
+      <section class="search-card">
+        <label for="query">名前または車両番号</label>
+        <div class="input-row">
+          <input id="query" type="search" placeholder="例：安藤 / 1516" autocomplete="off">
+          <button id="clearBtn" class="clear" type="button">×</button>
         </div>
-      </div>
-    </section>
+        <div class="chips">
+          <button class="chip" data-filter="lease">リース車</button>
+          <button class="chip" data-filter="mato">まとメンテ</button>
+        </div>
+      </section>
 
-    <section id="multipleCard" class="multiple hidden">
-      <div class="multiple-title">複数見つかりました</div>
-      <div id="multipleList"></div>
-    </section>
+      <section id="loading" class="panel">読み込み中…</section>
+      <section id="empty" class="panel hidden">該当する車両がありません</section>
+      <section id="list" class="vehicle-list hidden"></section>
 
-    <section id="notFound" class="message error hidden">
-      該当するタイヤが見つかりません
+      <footer>ASW Tire Manager Ver.2.1</footer>
     </section>
-
-    <footer>タイヤ倉庫データ Ver.1.1</footer>
   </main>
 
-  <script src="data.js"></script>
-  <script src="app.js"></script>
+  <dialog id="detailDialog">
+    <form method="dialog" class="dialog-card">
+      <button class="dialog-close" value="cancel" aria-label="閉じる">×</button>
+      <div id="detailBody"></div>
+    </form>
+  </dialog>
+
+  <script type="module" src="app.js"></script>
 </body>
 </html>

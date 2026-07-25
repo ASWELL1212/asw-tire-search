@@ -1,21 +1,16 @@
-ASW Tire Manager Ver.2.1
+ASW Tire Manager Ver.2.1.1 最短修正版
 
-追加機能
-- Firebase Authenticationによるログイン
-- Cloud Firestoreとのリアルタイム同期
-- 142台の初期データ一括登録
-- 名前・車両番号検索
-- リース車フラグ
-- まとメンテフラグ
-- スタッドレス交換済み／ノーマル交換済み
-- 交換日の自動記録
-- 状態別の件数表示と絞り込み
+修正内容
+- 古いService Workerキャッシュを完全に回避
+- app.jsを app-v211.js に変更
+- seed-data.jsを seed-data-v211.js に変更
+- Firebase設定をコンソール表示と完全一致
+- Service Workerを一時的に無効化
 
-GitHub更新手順
-1. リポジトリで Add file → Upload files
+更新方法
+1. GitHubのリポジトリで Add file → Upload files
 2. このフォルダ内の全ファイルをアップロード
-3. 既存ファイルの上書きを確認
-4. Commit changes
-5. 公開アプリを開き、必要なら再読み込み
-6. Firebase登録済みメールアドレスとパスワードでログイン
-7. 最初の1回だけ「初期データを登録」を押す
+3. Commit changes
+4. 次のURLを開く
+   https://aswell1212.github.io/asw-tire-search/?v=211
+5. ログインする

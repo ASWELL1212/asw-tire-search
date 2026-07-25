@@ -45,6 +45,7 @@ let currentFilter = "all";
 let statusMode = "active";
 let regLease = false;
 let regMato = false;
+let seasonMode = "none";
 let unsubscribe = null;
 
 const normalize = (v) => String(v ?? "").normalize("NFKC").replace(/[\s\-ー]/g, "").toLowerCase();
@@ -158,6 +159,29 @@ registerForm.addEventListener("submit", async (e) => {
   }
 });
 
+
+$("winterPendingBtn").addEventListener("click", () => {
+  seasonMode = seasonMode === "winterPending" ? "none" : "winterPending";
+  updateSeasonButtons();
+  render();
+});
+$("summerPendingBtn").addEventListener("click", () => {
+  seasonMode = seasonMode === "summerPending" ? "none" : "summerPending";
+  updateSeasonButtons();
+  render();
+});
+$("contactedBtn").addEventListener("click", () => {
+  seasonMode = seasonMode === "contacted" ? "none" : "contacted";
+  updateSeasonButtons();
+  render();
+});
+
+function updateSeasonButtons() {
+  $("winterPendingBtn").classList.toggle("active", seasonMode === "winterPending");
+  $("summerPendingBtn").classList.toggle("active", seasonMode === "summerPending");
+  $("contactedBtn").classList.toggle("active", seasonMode === "contacted");
+}
+
 document.querySelectorAll("[data-filter]").forEach(btn => {
   btn.addEventListener("click", () => {
     const next = btn.dataset.filter;
@@ -228,6 +252,9 @@ function updateCounts() {
   $("countStudless").textContent = activeVehicles.filter(v => v.mountedTire === "studless").length;
   $("countNormal").textContent = activeVehicles.filter(v => v.mountedTire === "normal").length;
   $("countUnset").textContent = activeVehicles.filter(v => !v.mountedTire || v.mountedTire === "unset").length;
+  $("countWinterPending").textContent = activeVehicles.filter(v => v.mountedTire !== "studless").length;
+  $("countSummerPending").textContent = activeVehicles.filter(v => v.mountedTire !== "normal").length;
+  $("countContacted").textContent = activeVehicles.filter(v => v.studlessContactedAt || v.normalContactedAt).length;
 }
 
 function filteredVehicles() {
@@ -243,6 +270,9 @@ function filteredVehicles() {
     if (currentFilter === "unset") return !v.mountedTire || v.mountedTire === "unset";
     if (currentFilter === "lease") return v.lease === true;
     if (currentFilter === "mato") return v.matoMaintenance === true;
+    if (seasonMode === "winterPending") return v.mountedTire !== "studless";
+    if (seasonMode === "summerPending") return v.mountedTire !== "normal";
+    if (seasonMode === "contacted") return Boolean(v.studlessContactedAt || v.normalContactedAt);
     return true;
   }).sort((a,b) => (a.column ?? 99) - (b.column ?? 99) || (a.position ?? 99) - (b.position ?? 99));
 }
@@ -251,6 +281,8 @@ function badgeHtml(v) {
   const out = [];
   if (v.lease) out.push('<span class="badge lease">リース車</span>');
   if (v.matoMaintenance) out.push('<span class="badge mato">まとメンテ</span>');
+  if (v.studlessContactedAt) out.push('<span class="badge contacted">冬タイヤ連絡済み</span>');
+  if (v.normalContactedAt) out.push('<span class="badge contacted">夏タイヤ連絡済み</span>');
   if (v.mountedTire === "studless") out.push('<span class="badge studless">スタッドレス交換済み</span>');
   else if (v.mountedTire === "normal") out.push('<span class="badge normal">ノーマル交換済み</span>');
   else out.push('<span class="badge unset">交換状態 未設定</span>');
@@ -322,6 +354,20 @@ function openDetail(id) {
       <button type="button" class="action normal" id="normalBtn">ノーマルへ交換済みにする</button>
     </div>
 
+    <div class="contact-actions">
+      <button type="button" class="action ${v.studlessContactedAt ? "active" : ""}" id="studlessContactBtn">
+        ${v.studlessContactedAt ? "✓ " : ""}冬タイヤ交換の連絡済み
+      </button>
+      <button type="button" class="action ${v.normalContactedAt ? "active" : ""}" id="normalContactBtn">
+        ${v.normalContactedAt ? "✓ " : ""}夏タイヤ交換の連絡済み
+      </button>
+    </div>
+
+    <div class="contact-dates">
+      <span>冬連絡日：${dateText(v.studlessContactedAt) || "未連絡"}</span>
+      <span>夏連絡日：${dateText(v.normalContactedAt) || "未連絡"}</span>
+    </div>
+
     <div class="status-actions">
       ${v.active === false
         ? '<button type="button" class="action restore" id="restoreBtn">保管中へ戻す</button>'
@@ -338,12 +384,22 @@ function openDetail(id) {
   $("matoToggle").onclick = () => updateVehicle(v.id, { matoMaintenance: !v.matoMaintenance });
   $("studlessBtn").onclick = () => updateVehicle(v.id, {
     mountedTire: "studless",
-    studlessChangedAt: serverTimestamp()
+    studlessChangedAt: serverTimestamp(),
+    studlessContactedAt: null
   }, "studless");
   $("normalBtn").onclick = () => updateVehicle(v.id, {
     mountedTire: "normal",
-    normalChangedAt: serverTimestamp()
+    normalChangedAt: serverTimestamp(),
+    normalContactedAt: null
   }, "normal");
+
+  $("studlessContactBtn").onclick = () => updateVehicle(v.id, {
+    studlessContactedAt: v.studlessContactedAt ? null : serverTimestamp()
+  }, v.studlessContactedAt ? "winterContactCancel" : "winterContact");
+
+  $("normalContactBtn").onclick = () => updateVehicle(v.id, {
+    normalContactedAt: v.normalContactedAt ? null : serverTimestamp()
+  }, v.normalContactedAt ? "summerContactCancel" : "summerContact");
 
   if ($("outboundBtn")) {
     $("outboundBtn").onclick = () => updateVehicle(v.id, {
@@ -377,7 +433,12 @@ async function updateVehicle(id, changes, historyType = null) {
         label:
           historyType === "studless" ? "スタッドレスへ交換" :
           historyType === "normal" ? "ノーマルへ交換" :
-          historyType === "outbound" ? "出庫" : "保管中へ復帰",
+          historyType === "outbound" ? "出庫" :
+          historyType === "restore" ? "保管中へ復帰" :
+          historyType === "winterContact" ? "冬タイヤ交換の連絡済み" :
+          historyType === "winterContactCancel" ? "冬タイヤ連絡済みを解除" :
+          historyType === "summerContact" ? "夏タイヤ交換の連絡済み" :
+          "夏タイヤ連絡済みを解除",
         changedAt: serverTimestamp(),
         operator: auth.currentUser?.email || ""
       });

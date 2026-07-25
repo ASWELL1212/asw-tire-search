@@ -72,3 +72,81 @@ dialog::backdrop{background:rgba(15,23,42,.56)}
 .current-state{text-align:center;font-size:19px;font-weight:900;margin:16px 0 6px}
 .date-note{text-align:center;color:#64748b;font-size:13px;min-height:18px}
 @media(min-width:520px){.dashboard{grid-template-columns:repeat(4,1fr)}}
+
+.last-dates{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin:14px 0 4px;
+}
+.last-dates div{
+  background:#f8fafc;
+  border:1px solid #cbd5e1;
+  border-radius:12px;
+  padding:10px;
+}
+.last-dates span{
+  display:block;
+  color:#64748b;
+  font-size:12px;
+  font-weight:800;
+}
+.last-dates strong{
+  display:block;
+  margin-top:4px;
+  font-size:16px;
+}
+.history-section{
+  margin-top:20px;
+  border-top:1px solid #e2e8f0;
+  padding-top:16px;
+}
+.history-section h3{
+  margin:0 0 10px;
+  font-size:18px;
+}
+.history-list{
+  display:grid;
+  gap:8px;
+  color:#475569;
+}
+.history-item{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  align-items:center;
+  border-radius:12px;
+  padding:11px 12px;
+  border:1px solid #e2e8f0;
+  background:#fff;
+}
+.history-item div{
+  min-width:0;
+}
+.history-item strong,
+.history-item span{
+  display:block;
+}
+.history-item span{
+  margin-top:2px;
+  color:#64748b;
+  font-size:12px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.history-item time{
+  white-space:nowrap;
+  font-weight:900;
+}
+.history-studless{
+  border-left:5px solid #3b82f6;
+}
+.history-normal{
+  border-left:5px solid #f97316;
+}
+.history-empty{
+  text-align:center;
+  padding:14px;
+  background:#f8fafc;
+  border-radius:12px;
+}

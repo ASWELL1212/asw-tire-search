@@ -200,8 +200,6 @@ function openDetail(id) {
   if (!v) return;
   const stateLabel = v.mountedTire === "studless" ? "スタッドレスタイヤ装着中"
     : v.mountedTire === "normal" ? "ノーマルタイヤ装着中" : "交換状態 未設定";
-  const changedDate = v.mountedTire === "studless" ? dateText(v.studlessChangedAt)
-    : v.mountedTire === "normal" ? dateText(v.normalChangedAt) : "";
 
   detailBody.innerHTML = `
     <div class="detail-title">${escapeHtml(v.name)}</div>
@@ -218,12 +216,27 @@ function openDetail(id) {
     </div>
 
     <div class="current-state">${stateLabel}</div>
-    <div class="date-note">${changedDate ? `最終交換日：${changedDate}` : ""}</div>
+
+    <div class="last-dates">
+      <div>
+        <span>スタッドレス最終交換日</span>
+        <strong>${dateText(v.studlessChangedAt) || "未登録"}</strong>
+      </div>
+      <div>
+        <span>ノーマル最終交換日</span>
+        <strong>${dateText(v.normalChangedAt) || "未登録"}</strong>
+      </div>
+    </div>
 
     <div class="tire-actions">
       <button type="button" class="action studless" id="studlessBtn">スタッドレスへ交換済みにする</button>
       <button type="button" class="action normal" id="normalBtn">ノーマルへ交換済みにする</button>
     </div>
+
+    <section class="history-section">
+      <h3>交換履歴</h3>
+      <div id="historyList" class="history-list">読み込み中…</div>
+    </section>
   `;
   detailDialog.showModal();
 
@@ -232,22 +245,76 @@ function openDetail(id) {
   $("studlessBtn").onclick = () => updateVehicle(v.id, {
     mountedTire: "studless",
     studlessChangedAt: serverTimestamp()
-  });
+  }, "studless");
   $("normalBtn").onclick = () => updateVehicle(v.id, {
     mountedTire: "normal",
     normalChangedAt: serverTimestamp()
-  });
+  }, "normal");
+
+  loadHistory(v.id);
 }
 
-async function updateVehicle(id, changes) {
+async function updateVehicle(id, changes, historyType = null) {
   try {
-    await updateDoc(doc(db, "vehicles", id), {
-      ...changes,
-      updatedAt: serverTimestamp()
-    });
+    if (historyType) {
+      const batch = writeBatch(db);
+      const vehicleRef = doc(db, "vehicles", id);
+      const historyRef = doc(collection(db, "vehicles", id, "history"));
+
+      batch.update(vehicleRef, {
+        ...changes,
+        updatedAt: serverTimestamp()
+      });
+      batch.set(historyRef, {
+        type: historyType,
+        label: historyType === "studless" ? "スタッドレスへ交換" : "ノーマルへ交換",
+        changedAt: serverTimestamp(),
+        operator: auth.currentUser?.email || ""
+      });
+      await batch.commit();
+    } else {
+      await updateDoc(doc(db, "vehicles", id), {
+        ...changes,
+        updatedAt: serverTimestamp()
+      });
+    }
     detailDialog.close();
   } catch (err) {
     alert("更新に失敗しました。");
+    console.error(err);
+  }
+}
+
+async function loadHistory(vehicleId) {
+  const historyList = $("historyList");
+  if (!historyList) return;
+
+  try {
+    const snap = await getDocs(collection(db, "vehicles", vehicleId, "history"));
+    const items = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => {
+        const aTime = a.changedAt?.toMillis ? a.changedAt.toMillis() : 0;
+        const bTime = b.changedAt?.toMillis ? b.changedAt.toMillis() : 0;
+        return bTime - aTime;
+      });
+
+    if (!items.length) {
+      historyList.innerHTML = '<div class="history-empty">交換履歴はまだありません</div>';
+      return;
+    }
+
+    historyList.innerHTML = items.map(item => `
+      <div class="history-item ${item.type === "studless" ? "history-studless" : "history-normal"}">
+        <div>
+          <strong>${escapeHtml(item.label || "")}</strong>
+          <span>${escapeHtml(item.operator || "")}</span>
+        </div>
+        <time>${dateText(item.changedAt) || "反映中"}</time>
+      </div>
+    `).join("");
+  } catch (err) {
+    historyList.textContent = "履歴の読み込みに失敗しました。";
     console.error(err);
   }
 }

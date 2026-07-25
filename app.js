@@ -10,7 +10,7 @@ import {
 import { SEED_DATA } from "./seed-data.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyByu3F2wgJL_dHdtuqDEXq1n3qh7YgFgz8",
+  apiKey: "AIzaSyByu3F2wgJL_dHdtuqDEXqln3qh7YgFgz8",
   authDomain: "asw-tire-management.firebaseapp.com",
   projectId: "asw-tire-management",
   storageBucket: "asw-tire-management.firebasestorage.app",
@@ -60,7 +60,7 @@ loginForm.addEventListener("submit", async (e) => {
     await signInWithEmailAndPassword(auth, $("email").value.trim(), $("password").value);
     loginMessage.textContent = "";
   } catch (err) {
-    loginMessage.textContent = "メールアドレスまたはパスワードを確認してください。";
+    loginMessage.textContent = `ログインエラー：${err.code || err.message}`;
     console.error(err);
   }
 });

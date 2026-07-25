@@ -1,4 +1,4 @@
-const CACHE = "asw-tire-manager-v2-2";
+const CACHE = "asw-tire-manager-v2-3";
 const ASSETS = ["./","./index.html","./style.css","./app.js","./seed-data.js","./manifest.webmanifest"];
 self.addEventListener("install", event => {
   self.skipWaiting();

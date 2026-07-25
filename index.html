@@ -59,6 +59,12 @@
         </button>
       </section>
 
+      <section class="quick-actions">
+        <button id="newVehicleBtn" class="quick-action">＋ 新規預かり登録</button>
+        <button id="showActiveBtn" class="quick-action active">保管中</button>
+        <button id="showOutboundBtn" class="quick-action">出庫済み</button>
+      </section>
+
       <section class="search-card">
         <label for="query">名前または車両番号</label>
         <div class="input-row">
@@ -75,9 +81,30 @@
       <section id="empty" class="panel hidden">該当する車両がありません</section>
       <section id="list" class="vehicle-list hidden"></section>
 
-      <footer>ASW Tire Manager Ver.2.2</footer>
+      <footer>ASW Tire Manager Ver.2.3</footer>
     </section>
   </main>
+
+  <dialog id="registerDialog">
+    <form id="registerForm" class="dialog-card">
+      <button type="button" class="dialog-close" id="registerCloseBtn" aria-label="閉じる">×</button>
+      <div class="detail-title">新規預かり登録</div>
+      <label>顧客名<input id="regName" required></label>
+      <label>車種<input id="regVehicle" required></label>
+      <label>車両番号<input id="regNumber" required></label>
+      <div class="form-grid">
+        <label>列<input id="regColumn" type="number" min="1" max="99" required></label>
+        <label>番<input id="regPosition" type="number" min="1" max="999" required></label>
+      </div>
+      <button type="button" id="suggestPlaceBtn" class="action">空き場所を自動提案</button>
+      <div class="switch-row">
+        <button type="button" id="regLeaseBtn" class="action">リース車</button>
+        <button type="button" id="regMatoBtn" class="action">まとメンテ</button>
+      </div>
+      <button type="submit" class="primary">登録する</button>
+      <div id="registerMessage" class="message"></div>
+    </form>
+  </dialog>
 
   <dialog id="detailDialog">
     <form method="dialog" class="dialog-card">

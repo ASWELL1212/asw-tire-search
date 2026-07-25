@@ -150,3 +150,15 @@ dialog::backdrop{background:rgba(15,23,42,.56)}
   background:#f8fafc;
   border-radius:12px;
 }
+
+.quick-actions{display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.quick-action{border:0;border-radius:12px;padding:12px 8px;background:#e2e8f0;color:#334155;font-weight:900}
+.quick-action.active{background:#164e63;color:white}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.status-actions{margin-top:14px}
+.status-actions .action{width:100%}
+.action.outbound{background:#fee2e2;color:#991b1b}
+.action.restore{background:#dcfce7;color:#166534}
+.outbound-banner{background:#fee2e2;color:#991b1b;border:2px solid #ef4444;border-radius:12px;padding:9px;margin:-4px 0 12px;text-align:center;font-weight:900}
+.history-status{border-left:5px solid #64748b}
+@media(max-width:430px){.quick-actions{grid-template-columns:1fr 1fr}.quick-actions .quick-action:first-child{grid-column:1/-1}}

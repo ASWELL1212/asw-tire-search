@@ -36,9 +36,15 @@ const loading = $("loading");
 const empty = $("empty");
 const detailDialog = $("detailDialog");
 const detailBody = $("detailBody");
+const registerDialog = $("registerDialog");
+const registerForm = $("registerForm");
+const registerMessage = $("registerMessage");
 
 let vehicles = [];
 let currentFilter = "all";
+let statusMode = "active";
+let regLease = false;
+let regMato = false;
 let unsubscribe = null;
 
 const normalize = (v) => String(v ?? "").normalize("NFKC").replace(/[\s\-ー]/g, "").toLowerCase();
@@ -71,7 +77,86 @@ $("clearBtn").addEventListener("click", () => {
   queryInput.focus();
   render();
 });
+
 queryInput.addEventListener("input", render);
+
+$("newVehicleBtn").addEventListener("click", () => {
+  registerForm.reset();
+  regLease = false;
+  regMato = false;
+  $("regLeaseBtn").classList.remove("active");
+  $("regMatoBtn").classList.remove("active");
+  registerMessage.textContent = "";
+  registerDialog.showModal();
+});
+$("registerCloseBtn").addEventListener("click", () => registerDialog.close());
+
+$("regLeaseBtn").addEventListener("click", () => {
+  regLease = !regLease;
+  $("regLeaseBtn").classList.toggle("active", regLease);
+});
+$("regMatoBtn").addEventListener("click", () => {
+  regMato = !regMato;
+  $("regMatoBtn").classList.toggle("active", regMato);
+});
+$("showActiveBtn").addEventListener("click", () => {
+  statusMode = "active";
+  $("showActiveBtn").classList.add("active");
+  $("showOutboundBtn").classList.remove("active");
+  render();
+});
+$("showOutboundBtn").addEventListener("click", () => {
+  statusMode = "outbound";
+  $("showOutboundBtn").classList.add("active");
+  $("showActiveBtn").classList.remove("active");
+  render();
+});
+$("suggestPlaceBtn").addEventListener("click", () => {
+  const used = new Set(vehicles.filter(v => v.active !== false).map(v => `${v.column}-${v.position}`));
+  for (let column = 1; column <= 10; column++) {
+    for (let position = 1; position <= 30; position++) {
+      if (!used.has(`${column}-${position}`)) {
+        $("regColumn").value = column;
+        $("regPosition").value = position;
+        registerMessage.textContent = `${column}列 ${position}番を提案しました。`;
+        return;
+      }
+    }
+  }
+  registerMessage.textContent = "空き場所が見つかりません。";
+});
+registerForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const column = Number($("regColumn").value);
+  const position = Number($("regPosition").value);
+  const duplicatePlace = vehicles.some(v => v.active !== false && Number(v.column) === column && Number(v.position) === position);
+  if (duplicatePlace) {
+    registerMessage.textContent = "その保管場所は使用中です。";
+    return;
+  }
+  try {
+    const vehicleRef = doc(collection(db, "vehicles"));
+    await setDoc(vehicleRef, {
+      name: $("regName").value.trim(),
+      vehicle: $("regVehicle").value.trim(),
+      number: $("regNumber").value.trim(),
+      column,
+      position,
+      lease: regLease,
+      matoMaintenance: regMato,
+      mountedTire: "unset",
+      normalChangedAt: null,
+      studlessChangedAt: null,
+      active: true,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    registerMessage.textContent = "登録しました。";
+    setTimeout(() => registerDialog.close(), 500);
+  } catch (err) {
+    registerMessage.textContent = `登録エラー：${err.code || err.message}`;
+  }
+});
 
 document.querySelectorAll("[data-filter]").forEach(btn => {
   btn.addEventListener("click", () => {
@@ -138,15 +223,19 @@ seedBtn.addEventListener("click", async () => {
 });
 
 function updateCounts() {
-  $("countAll").textContent = vehicles.length;
-  $("countStudless").textContent = vehicles.filter(v => v.mountedTire === "studless").length;
-  $("countNormal").textContent = vehicles.filter(v => v.mountedTire === "normal").length;
-  $("countUnset").textContent = vehicles.filter(v => !v.mountedTire || v.mountedTire === "unset").length;
+  const activeVehicles = vehicles.filter(v => v.active !== false);
+  $("countAll").textContent = activeVehicles.length;
+  $("countStudless").textContent = activeVehicles.filter(v => v.mountedTire === "studless").length;
+  $("countNormal").textContent = activeVehicles.filter(v => v.mountedTire === "normal").length;
+  $("countUnset").textContent = activeVehicles.filter(v => !v.mountedTire || v.mountedTire === "unset").length;
 }
 
 function filteredVehicles() {
   const q = normalize(queryInput.value);
   return vehicles.filter(v => {
+    const isActive = v.active !== false;
+    if (statusMode === "active" && !isActive) return false;
+    if (statusMode === "outbound" && isActive) return false;
     const textMatch = !q || normalize(v.name).includes(q) || normalize(v.number).includes(q);
     if (!textMatch) return false;
     if (currentFilter === "studless") return v.mountedTire === "studless";
@@ -204,7 +293,7 @@ function openDetail(id) {
   detailBody.innerHTML = `
     <div class="detail-title">${escapeHtml(v.name)}</div>
     <div class="detail-sub">${escapeHtml(v.vehicle)}　${escapeHtml(v.number)}</div>
-    <div class="detail-place">${escapeHtml(v.column)}列　${escapeHtml(v.position)}番</div>
+    <div class="detail-place">${escapeHtml(v.column)}列　${escapeHtml(v.position)}番</div>${v.active === false ? '<div class="outbound-banner">出庫済み</div>' : ''}
 
     <div class="switch-row">
       <button type="button" class="action ${v.lease ? "active" : ""}" id="leaseToggle">
@@ -233,6 +322,11 @@ function openDetail(id) {
       <button type="button" class="action normal" id="normalBtn">ノーマルへ交換済みにする</button>
     </div>
 
+    <div class="status-actions">
+      ${v.active === false
+        ? '<button type="button" class="action restore" id="restoreBtn">保管中へ戻す</button>'
+        : '<button type="button" class="action outbound" id="outboundBtn">出庫済みにする</button>'}
+    </div>
     <section class="history-section">
       <h3>交換履歴</h3>
       <div id="historyList" class="history-list">読み込み中…</div>
@@ -251,6 +345,19 @@ function openDetail(id) {
     normalChangedAt: serverTimestamp()
   }, "normal");
 
+  if ($("outboundBtn")) {
+    $("outboundBtn").onclick = () => updateVehicle(v.id, {
+      active: false,
+      outboundAt: serverTimestamp()
+    }, "outbound");
+  }
+  if ($("restoreBtn")) {
+    $("restoreBtn").onclick = () => updateVehicle(v.id, {
+      active: true,
+      outboundAt: null
+    }, "restore");
+  }
+
   loadHistory(v.id);
 }
 
@@ -267,7 +374,10 @@ async function updateVehicle(id, changes, historyType = null) {
       });
       batch.set(historyRef, {
         type: historyType,
-        label: historyType === "studless" ? "スタッドレスへ交換" : "ノーマルへ交換",
+        label:
+          historyType === "studless" ? "スタッドレスへ交換" :
+          historyType === "normal" ? "ノーマルへ交換" :
+          historyType === "outbound" ? "出庫" : "保管中へ復帰",
         changedAt: serverTimestamp(),
         operator: auth.currentUser?.email || ""
       });
@@ -305,7 +415,10 @@ async function loadHistory(vehicleId) {
     }
 
     historyList.innerHTML = items.map(item => `
-      <div class="history-item ${item.type === "studless" ? "history-studless" : "history-normal"}">
+      <div class="history-item ${
+        item.type === "studless" ? "history-studless" :
+        item.type === "normal" ? "history-normal" : "history-status"
+      }">
         <div>
           <strong>${escapeHtml(item.label || "")}</strong>
           <span>${escapeHtml(item.operator || "")}</span>

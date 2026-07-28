@@ -177,7 +177,7 @@ function renderWarehouseMap() {
   let html = "";
   for (let column = 1; column <= 10; column++) {
     html += `<section class="map-column"><h3>${column}列</h3><div class="map-grid">`;
-    for (let position = 1; position <= 30; position++) {
+    for (let position = 1; position <= 6; position++) {
       const vehicle = occupied.get(`${column}-${position}`);
       if (vehicle) {
         html += `
@@ -254,7 +254,7 @@ function getVacancies(excludeVehicleId = null) {
   );
   const vacancies = [];
   for (let column = 1; column <= 10; column++) {
-    for (let position = 1; position <= 30; position++) {
+    for (let position = 1; position <= 6; position++) {
       if (!used.has(`${column}-${position}`)) vacancies.push({ column, position });
     }
   }

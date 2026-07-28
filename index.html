@@ -65,6 +65,8 @@
         <button id="showOutboundBtn" class="quick-action">出庫済み</button>
       </section>
 
+      <section class="vacancy-actions"><button id="vacancyListBtn" class="vacancy-action">空き場所一覧</button></section>
+
       <section class="season-actions">
         <button id="winterPendingBtn" class="season-action winter">
           <span>冬タイヤ未交換</span>
@@ -96,9 +98,18 @@
       <section id="empty" class="panel hidden">該当する車両がありません</section>
       <section id="list" class="vehicle-list hidden"></section>
 
-      <footer>ASW Tire Manager Ver.2.4</footer>
+      <footer>ASW Tire Manager Ver.3.0</footer>
     </section>
   </main>
+
+  <dialog id="vacancyDialog">
+    <form method="dialog" class="dialog-card">
+      <button class="dialog-close" value="cancel" aria-label="閉じる">×</button>
+      <div class="detail-title">空き場所一覧</div>
+      <div class="vacancy-summary" id="vacancySummary"></div>
+      <div class="vacancy-list" id="vacancyList"></div>
+    </form>
+  </dialog>
 
   <dialog id="registerDialog">
     <form id="registerForm" class="dialog-card">

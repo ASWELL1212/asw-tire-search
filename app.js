@@ -39,6 +39,9 @@ const detailBody = $("detailBody");
 const registerDialog = $("registerDialog");
 const registerForm = $("registerForm");
 const registerMessage = $("registerMessage");
+const vacancyDialog = $("vacancyDialog");
+const vacancyList = $("vacancyList");
+const vacancySummary = $("vacancySummary");
 
 let vehicles = [];
 let currentFilter = "all";
@@ -113,18 +116,14 @@ $("showOutboundBtn").addEventListener("click", () => {
   render();
 });
 $("suggestPlaceBtn").addEventListener("click", () => {
-  const used = new Set(vehicles.filter(v => v.active !== false).map(v => `${v.column}-${v.position}`));
-  for (let column = 1; column <= 10; column++) {
-    for (let position = 1; position <= 30; position++) {
-      if (!used.has(`${column}-${position}`)) {
-        $("regColumn").value = column;
-        $("regPosition").value = position;
-        registerMessage.textContent = `${column}列 ${position}番を提案しました。`;
-        return;
-      }
-    }
+  const first = getVacancies()[0];
+  if (!first) {
+    registerMessage.textContent = "空き場所が見つかりません。";
+    return;
   }
-  registerMessage.textContent = "空き場所が見つかりません。";
+  $("regColumn").value = first.column;
+  $("regPosition").value = first.position;
+  registerMessage.textContent = `${first.column}列 ${first.position}番を提案しました。`;
 });
 registerForm.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -159,6 +158,46 @@ registerForm.addEventListener("submit", async (e) => {
   }
 });
 
+
+
+$("vacancyListBtn").addEventListener("click", () => {
+  const vacancies = getVacancies();
+  vacancySummary.textContent = `空き ${vacancies.length}か所`;
+  vacancyList.innerHTML = vacancies.length
+    ? vacancies.map(place => `<button type="button" class="vacancy-item" data-column="${place.column}" data-position="${place.position}">${place.column}列 ${place.position}番</button>`).join("")
+    : '<div class="history-empty">空き場所はありません</div>';
+
+  vacancyList.querySelectorAll(".vacancy-item").forEach(btn => {
+    btn.addEventListener("click", () => {
+      vacancyDialog.close();
+      registerForm.reset();
+      regLease = false;
+      regMato = false;
+      $("regLeaseBtn").classList.remove("active");
+      $("regMatoBtn").classList.remove("active");
+      $("regColumn").value = btn.dataset.column;
+      $("regPosition").value = btn.dataset.position;
+      registerMessage.textContent = `${btn.dataset.column}列 ${btn.dataset.position}番を選択しました。`;
+      registerDialog.showModal();
+    });
+  });
+  vacancyDialog.showModal();
+});
+
+function getVacancies(excludeVehicleId = null) {
+  const used = new Set(
+    vehicles
+      .filter(v => v.active !== false && v.id !== excludeVehicleId)
+      .map(v => `${Number(v.column)}-${Number(v.position)}`)
+  );
+  const vacancies = [];
+  for (let column = 1; column <= 10; column++) {
+    for (let position = 1; position <= 30; position++) {
+      if (!used.has(`${column}-${position}`)) vacancies.push({ column, position });
+    }
+  }
+  return vacancies;
+}
 
 $("winterPendingBtn").addEventListener("click", () => {
   seasonMode = seasonMode === "winterPending" ? "none" : "winterPending";
@@ -327,6 +366,19 @@ function openDetail(id) {
     <div class="detail-sub">${escapeHtml(v.vehicle)}　${escapeHtml(v.number)}</div>
     <div class="detail-place">${escapeHtml(v.column)}列　${escapeHtml(v.position)}番</div>${v.active === false ? '<div class="outbound-banner">出庫済み</div>' : ''}
 
+    <section class="move-section">
+      <h3>保管場所変更</h3>
+      <div class="form-grid">
+        <label>列<input id="moveColumn" type="number" min="1" max="99" value="${escapeHtml(v.column)}"></label>
+        <label>番<input id="movePosition" type="number" min="1" max="999" value="${escapeHtml(v.position)}"></label>
+      </div>
+      <div class="move-actions">
+        <button type="button" class="action" id="suggestMoveBtn">空きを提案</button>
+        <button type="button" class="action active" id="saveMoveBtn">場所を変更</button>
+      </div>
+      <div id="moveMessage" class="message"></div>
+    </section>
+
     <div class="switch-row">
       <button type="button" class="action ${v.lease ? "active" : ""}" id="leaseToggle">
         ${v.lease ? "✓ " : ""}リース車
@@ -414,6 +466,67 @@ function openDetail(id) {
     }, "restore");
   }
 
+  $("suggestMoveBtn").onclick = () => {
+    const first = getVacancies(v.id)[0];
+    if (!first) {
+      $("moveMessage").textContent = "空き場所がありません。";
+      return;
+    }
+    $("moveColumn").value = first.column;
+    $("movePosition").value = first.position;
+    $("moveMessage").textContent = `${first.column}列 ${first.position}番を提案しました。`;
+  };
+
+  $("saveMoveBtn").onclick = async () => {
+    const newColumn = Number($("moveColumn").value);
+    const newPosition = Number($("movePosition").value);
+
+    if (!newColumn || !newPosition) {
+      $("moveMessage").textContent = "列と番を入力してください。";
+      return;
+    }
+    if (newColumn === Number(v.column) && newPosition === Number(v.position)) {
+      $("moveMessage").textContent = "現在と同じ保管場所です。";
+      return;
+    }
+
+    const occupied = vehicles.some(other =>
+      other.id !== v.id &&
+      other.active !== false &&
+      Number(other.column) === newColumn &&
+      Number(other.position) === newPosition
+    );
+    if (occupied) {
+      $("moveMessage").textContent = "その保管場所は使用中です。";
+      return;
+    }
+
+    try {
+      const batch = writeBatch(db);
+      const vehicleRef = doc(db, "vehicles", v.id);
+      const historyRef = doc(collection(db, "vehicles", v.id, "history"));
+      batch.update(vehicleRef, {
+        column: newColumn,
+        position: newPosition,
+        updatedAt: serverTimestamp()
+      });
+      batch.set(historyRef, {
+        type: "move",
+        label: `保管場所変更 ${v.column}列${v.position}番 → ${newColumn}列${newPosition}番`,
+        fromColumn: Number(v.column),
+        fromPosition: Number(v.position),
+        toColumn: newColumn,
+        toPosition: newPosition,
+        changedAt: serverTimestamp(),
+        operator: auth.currentUser?.email || ""
+      });
+      await batch.commit();
+      detailDialog.close();
+    } catch (err) {
+      $("moveMessage").textContent = `変更エラー：${err.code || err.message}`;
+    }
+  };
+
   loadHistory(v.id);
 }
 
@@ -478,7 +591,7 @@ async function loadHistory(vehicleId) {
     historyList.innerHTML = items.map(item => `
       <div class="history-item ${
         item.type === "studless" ? "history-studless" :
-        item.type === "normal" ? "history-normal" : "history-status"
+        item.type === "normal" ? "history-normal" : item.type === "move" ? "history-move" : "history-status"
       }">
         <div>
           <strong>${escapeHtml(item.label || "")}</strong>

@@ -42,6 +42,8 @@ const registerMessage = $("registerMessage");
 const vacancyDialog = $("vacancyDialog");
 const vacancyList = $("vacancyList");
 const vacancySummary = $("vacancySummary");
+const warehouseMapDialog = $("warehouseMapDialog");
+const warehouseMap = $("warehouseMap");
 
 let vehicles = [];
 let currentFilter = "all";
@@ -159,6 +161,66 @@ registerForm.addEventListener("submit", async (e) => {
 });
 
 
+
+
+$("warehouseMapBtn").addEventListener("click", () => {
+  renderWarehouseMap();
+  warehouseMapDialog.showModal();
+});
+
+function renderWarehouseMap() {
+  const activeVehicles = vehicles.filter(v => v.active !== false);
+  const occupied = new Map(
+    activeVehicles.map(v => [`${Number(v.column)}-${Number(v.position)}`, v])
+  );
+
+  let html = "";
+  for (let column = 1; column <= 10; column++) {
+    html += `<section class="map-column"><h3>${column}列</h3><div class="map-grid">`;
+    for (let position = 1; position <= 30; position++) {
+      const vehicle = occupied.get(`${column}-${position}`);
+      if (vehicle) {
+        html += `
+          <button type="button" class="map-cell used" data-id="${escapeHtml(vehicle.id)}">
+            <strong>${position}</strong>
+            <span>${escapeHtml(vehicle.name)}</span>
+            <small>${escapeHtml(vehicle.number)}</small>
+          </button>`;
+      } else {
+        html += `
+          <button type="button" class="map-cell vacant" data-column="${column}" data-position="${position}">
+            <strong>${position}</strong>
+            <span>空き</span>
+          </button>`;
+      }
+    }
+    html += "</div></section>";
+  }
+
+  warehouseMap.innerHTML = html;
+
+  warehouseMap.querySelectorAll(".map-cell.used").forEach(btn => {
+    btn.addEventListener("click", () => {
+      warehouseMapDialog.close();
+      openDetail(btn.dataset.id);
+    });
+  });
+
+  warehouseMap.querySelectorAll(".map-cell.vacant").forEach(btn => {
+    btn.addEventListener("click", () => {
+      warehouseMapDialog.close();
+      registerForm.reset();
+      regLease = false;
+      regMato = false;
+      $("regLeaseBtn").classList.remove("active");
+      $("regMatoBtn").classList.remove("active");
+      $("regColumn").value = btn.dataset.column;
+      $("regPosition").value = btn.dataset.position;
+      registerMessage.textContent = `${btn.dataset.column}列 ${btn.dataset.position}番を選択しました。`;
+      registerDialog.showModal();
+    });
+  });
+}
 
 $("vacancyListBtn").addEventListener("click", () => {
   const vacancies = getVacancies();

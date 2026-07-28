@@ -220,3 +220,100 @@ dialog::backdrop{background:rgba(15,23,42,.56)}
 .move-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
 .history-move{border-left:5px solid #0f766e}
 @media(max-width:430px){.vacancy-list{grid-template-columns:repeat(2,1fr)}.move-actions{grid-template-columns:1fr}}
+
+.vacancy-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+.vacancy-action.secondary{
+  background:#334155;
+}
+.warehouse-dialog{
+  width:min(96vw,980px);
+}
+.map-legend{
+  display:flex;
+  gap:16px;
+  margin:10px 0 14px;
+  font-size:13px;
+  font-weight:800;
+}
+.map-legend span{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.legend-box{
+  width:18px;
+  height:18px;
+  border-radius:5px;
+  display:inline-block;
+}
+.legend-box.used{background:#fee2e2;border:1px solid #ef4444}
+.legend-box.vacant{background:#dcfce7;border:1px solid #22c55e}
+.warehouse-map{
+  display:grid;
+  gap:14px;
+  max-height:72vh;
+  overflow:auto;
+  padding-right:4px;
+}
+.map-column{
+  border:1px solid #cbd5e1;
+  border-radius:14px;
+  padding:10px;
+  background:#f8fafc;
+}
+.map-column h3{
+  margin:0 0 8px;
+  font-size:18px;
+}
+.map-grid{
+  display:grid;
+  grid-template-columns:repeat(10,1fr);
+  gap:6px;
+}
+.map-cell{
+  min-height:66px;
+  border-radius:10px;
+  border:1px solid transparent;
+  padding:5px 3px;
+  text-align:center;
+  font-weight:800;
+  overflow:hidden;
+}
+.map-cell strong{
+  display:block;
+  font-size:18px;
+}
+.map-cell span{
+  display:block;
+  font-size:11px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.map-cell small{
+  display:block;
+  font-size:10px;
+  margin-top:2px;
+}
+.map-cell.used{
+  background:#fee2e2;
+  border-color:#ef4444;
+  color:#991b1b;
+}
+.map-cell.vacant{
+  background:#dcfce7;
+  border-color:#22c55e;
+  color:#166534;
+}
+@media(max-width:700px){
+  .map-grid{grid-template-columns:repeat(5,1fr)}
+}
+@media(max-width:430px){
+  .vacancy-actions{grid-template-columns:1fr}
+  .map-grid{grid-template-columns:repeat(3,1fr)}
+  .map-cell{min-height:60px}
+}

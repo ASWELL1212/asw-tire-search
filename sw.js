@@ -1,5 +1,5 @@
-const CACHE = "asw-tire-manager-v3-1-1";
-const ASSETS = ["./","./index.html","./style.css","./app.js","./seed-data.js","./manifest.webmanifest"];
+const CACHE = "asw-tire-manager-v3-2-0-startup";
+const ASSETS = ["./","./index.html","./style.css","./startup.js","./app.js","./seed-data.js","./manifest.webmanifest"];
 self.addEventListener("install", event => {
   self.skipWaiting();
   event.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));

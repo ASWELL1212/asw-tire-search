@@ -101,7 +101,7 @@
       <section id="empty" class="panel hidden">該当する車両がありません</section>
       <section id="list" class="vehicle-list hidden"></section>
 
-      <footer>ASW Tire Manager Ver.3.1.1</footer>
+      <footer>ASW Tire Manager Ver.3.2.0</footer>
     </section>
   </main>
 
@@ -113,7 +113,8 @@
         <span><i class="legend-box used"></i>使用中</span>
         <span><i class="legend-box vacant"></i>空き</span>
       </div>
-      <div id="warehouseMap" class="warehouse-map"></div>
+      <p class="map-help">左右にスクロールして1〜30列を表示できます。重複位置は各カードを選択して編集できます。</p>
+      <div id="warehouseMap" class="warehouse-map" tabindex="0" role="region" aria-label="倉庫マップ・横スクロール"></div>
     </form>
   </dialog>
 
@@ -154,6 +155,16 @@
     </form>
   </dialog>
 
-  <script type="module" src="app.js"></script>
+  <dialog id="duplicateDialog" aria-labelledby="duplicateTitle">
+    <form method="dialog" class="dialog-card">
+      <h2 id="duplicateTitle">保管位置の重複</h2>
+      <p>この保管位置には、すでに別のタイヤが登録されています。重複したまま保存しますか？</p>
+      <div class="move-actions">
+        <button class="action" value="back" autofocus>戻る</button>
+        <button class="action active" value="save">このまま保存</button>
+      </div>
+    </form>
+  </dialog>
+  <script src="startup.js"></script>
 </body>
 </html>

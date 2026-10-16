@@ -62,7 +62,7 @@ const dateText = (value) => {
 const escapeHtml = (v) => {
   const div = document.createElement("div");
   div.textContent = String(v ?? "");
-  return div.innerHTML;
+  return div.innerHTML.replace(/"/g, "&quot;");
 };
 
 loginForm.addEventListener("submit", async (e) => {
@@ -129,13 +129,14 @@ $("suggestPlaceBtn").addEventListener("click", () => {
 });
 registerForm.addEventListener("submit", async (e) => {
   e.preventDefault();
+  const submitButton = registerForm.querySelector("button[type=submit]");
+  if (submitButton.disabled) return;
+  submitButton.disabled = true;
+  try {
   const column = Number($("regColumn").value);
   const position = Number($("regPosition").value);
   const duplicatePlace = vehicles.some(v => v.active !== false && Number(v.column) === column && Number(v.position) === position);
-  if (duplicatePlace) {
-    registerMessage.textContent = "その保管場所は使用中です。";
-    return;
-  }
+  if (duplicatePlace && !await confirmDuplicate()) return;
   try {
     const vehicleRef = doc(collection(db, "vehicles"));
     await setDoc(vehicleRef, {
@@ -154,10 +155,11 @@ registerForm.addEventListener("submit", async (e) => {
       updatedAt: serverTimestamp()
     });
     registerMessage.textContent = "登録しました。";
-    setTimeout(() => registerDialog.close(), 500);
+    registerDialog.close();
   } catch (err) {
     registerMessage.textContent = `登録エラー：${err.code || err.message}`;
   }
+  } finally { submitButton.disabled = false; }
 });
 
 
@@ -170,29 +172,33 @@ $("warehouseMapBtn").addEventListener("click", () => {
 
 function renderWarehouseMap() {
   const activeVehicles = vehicles.filter(v => v.active !== false);
-  const occupied = new Map(
-    activeVehicles.map(v => [`${Number(v.column)}-${Number(v.position)}`, v])
-  );
-
+  const occupied = new Map();
+  for (const v of activeVehicles) {
+    const key = `${Number(v.column)}-${Number(v.position)}`;
+    if (!occupied.has(key)) occupied.set(key, []);
+    occupied.get(key).push(v);
+  }
+  // Keep six standard positions; also show existing nonstandard positions/columns.
+  const columns = [...new Set([...Array.from({ length: 30 }, (_, i) => i + 1),
+    ...activeVehicles.map(v => Number(v.column)).filter(n => Number.isInteger(n) && n > 0)])].sort((a,b) => a-b);
   let html = "";
-  for (let column = 1; column <= 10; column++) {
+  for (const column of columns) {
     html += `<section class="map-column"><h3>${column}列</h3><div class="map-grid">`;
-    for (let position = 1; position <= 6; position++) {
-      const vehicle = occupied.get(`${column}-${position}`);
-      if (vehicle) {
-        html += `
-          <button type="button" class="map-cell used" data-id="${escapeHtml(vehicle.id)}">
-            <strong>${position}</strong>
-            <span>${escapeHtml(vehicle.name)}</span>
-            <small>${escapeHtml(vehicle.number)}</small>
-          </button>`;
+    const positions = [...new Set([1,2,3,4,5,6, ...activeVehicles.filter(v => Number(v.column) === column)
+      .map(v => Number(v.position)).filter(n => Number.isInteger(n) && n > 0)])].sort((a,b) => a-b);
+    for (const position of positions) {
+      const items = occupied.get(`${column}-${position}`) || [];
+      html += `<div class="map-slot ${items.length > 1 ? 'duplicate' : ''}"><div class="map-position">${position}番${items.length > 1 ? ' · 重複 '+items.length+'件' : ''}</div>`;
+      if (items.length) {
+        html += items.map(vehicle => `<button type="button" class="map-cell used" data-id="${escapeHtml(vehicle.id)}">
+          <span>${escapeHtml(vehicle.name)}</span>
+          <small>${escapeHtml(vehicle.vehicle)}</small>
+          <small>${escapeHtml(vehicle.number)}</small>
+        </button>`).join("");
       } else {
-        html += `
-          <button type="button" class="map-cell vacant" data-column="${column}" data-position="${position}">
-            <strong>${position}</strong>
-            <span>空き</span>
-          </button>`;
+        html += `<button type="button" class="map-cell vacant" data-column="${column}" data-position="${position}"><span>空き</span></button>`;
       }
+      html += "</div>";
     }
     html += "</div></section>";
   }
@@ -253,7 +259,7 @@ function getVacancies(excludeVehicleId = null) {
       .map(v => `${Number(v.column)}-${Number(v.position)}`)
   );
   const vacancies = [];
-  for (let column = 1; column <= 10; column++) {
+  for (let column = 1; column <= 30; column++) {
     for (let position = 1; position <= 6; position++) {
       if (!used.has(`${column}-${position}`)) vacancies.push({ column, position });
     }
@@ -312,11 +318,12 @@ onAuthStateChanged(auth, (user) => {
 function subscribeVehicles() {
   loading.classList.remove("hidden");
   unsubscribe = onSnapshot(collection(db, "vehicles"), (snap) => {
-    vehicles = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    vehicles = snap.docs.map(d => ({ ...d.data(), id: d.id }));
     loading.classList.add("hidden");
     setupCard.classList.toggle("hidden", vehicles.length > 0);
     updateCounts();
     render();
+    if (warehouseMapDialog.open) renderWarehouseMap();
   }, (err) => {
     loading.textContent = "データの読み込みに失敗しました。";
     console.error(err);
@@ -429,14 +436,18 @@ function openDetail(id) {
     <div class="detail-place">${escapeHtml(v.column)}列　${escapeHtml(v.position)}番</div>${v.active === false ? '<div class="outbound-banner">出庫済み</div>' : ''}
 
     <section class="move-section">
-      <h3>保管場所変更</h3>
+      <h3>登録内容の編集</h3>
+      <label>お客様の名前<input id="editName"></label>
+      <label>車名<input id="editVehicle"></label>
+      <label>プレート番号<input id="editNumber"></label>
       <div class="form-grid">
         <label>列<input id="moveColumn" type="number" min="1" max="99" value="${escapeHtml(v.column)}"></label>
         <label>番<input id="movePosition" type="number" min="1" max="999" value="${escapeHtml(v.position)}"></label>
       </div>
       <div class="move-actions">
         <button type="button" class="action" id="suggestMoveBtn">空きを提案</button>
-        <button type="button" class="action active" id="saveMoveBtn">場所を変更</button>
+        <button type="button" class="action active" id="saveMoveBtn">保存</button>
+        <button type="button" class="action" id="cancelEditBtn">キャンセル</button>
       </div>
       <div id="moveMessage" class="message"></div>
     </section>
@@ -492,6 +503,10 @@ function openDetail(id) {
       <div id="historyList" class="history-list">読み込み中…</div>
     </section>
   `;
+  $("editName").value = v.name ?? "";
+  $("editVehicle").value = v.vehicle ?? "";
+  $("editNumber").value = v.number ?? "";
+  $("cancelEditBtn").onclick = () => detailDialog.close();
   detailDialog.showModal();
 
   $("leaseToggle").onclick = () => updateVehicle(v.id, { lease: !v.lease });
@@ -540,53 +555,41 @@ function openDetail(id) {
   };
 
   $("saveMoveBtn").onclick = async () => {
+    const button = $("saveMoveBtn");
+    if (button.disabled) return;
     const newColumn = Number($("moveColumn").value);
     const newPosition = Number($("movePosition").value);
-
-    if (!newColumn || !newPosition) {
-      $("moveMessage").textContent = "列と番を入力してください。";
+    if (!Number.isInteger(newColumn) || newColumn < 1 || newColumn > 99 ||
+        !Number.isInteger(newPosition) || newPosition < 1 || newPosition > 999) {
+      $("moveMessage").textContent = "列は1〜99、番は1〜999の整数で入力してください。";
       return;
     }
-    if (newColumn === Number(v.column) && newPosition === Number(v.position)) {
-      $("moveMessage").textContent = "現在と同じ保管場所です。";
-      return;
-    }
-
-    const occupied = vehicles.some(other =>
-      other.id !== v.id &&
-      other.active !== false &&
-      Number(other.column) === newColumn &&
-      Number(other.position) === newPosition
-    );
-    if (occupied) {
-      $("moveMessage").textContent = "その保管場所は使用中です。";
-      return;
-    }
-
+    const values = { name: $("editName").value, vehicle: $("editVehicle").value,
+      number: $("editNumber").value, column: newColumn, position: newPosition };
+    const changes = Object.fromEntries(Object.entries(values).filter(([key, value]) =>
+      key === "column" || key === "position" ? value !== Number(v[key]) : value !== String(v[key] ?? "")));
+    button.disabled = true;
     try {
+      const occupied = vehicles.some(other => other.id !== v.id && other.active !== false &&
+        Number(other.column) === newColumn && Number(other.position) === newPosition);
+      if (occupied && !await confirmDuplicate()) return;
+      if (!Object.keys(changes).length) { detailDialog.close(); return; }
       const batch = writeBatch(db);
-      const vehicleRef = doc(db, "vehicles", v.id);
-      const historyRef = doc(collection(db, "vehicles", v.id, "history"));
-      batch.update(vehicleRef, {
-        column: newColumn,
-        position: newPosition,
-        updatedAt: serverTimestamp()
-      });
-      batch.set(historyRef, {
-        type: "move",
-        label: `保管場所変更 ${v.column}列${v.position}番 → ${newColumn}列${newPosition}番`,
-        fromColumn: Number(v.column),
-        fromPosition: Number(v.position),
-        toColumn: newColumn,
-        toPosition: newPosition,
-        changedAt: serverTimestamp(),
-        operator: auth.currentUser?.email || ""
-      });
+      batch.update(doc(db, "vehicles", v.id), { ...changes, updatedAt: serverTimestamp() });
+      if ("column" in changes || "position" in changes) {
+        batch.set(doc(collection(db, "vehicles", v.id, "history")), {
+          type: "move",
+          label: `保管場所変更 ${v.column}列${v.position}番 → ${newColumn}列${newPosition}番`,
+          fromColumn: Number(v.column), fromPosition: Number(v.position),
+          toColumn: newColumn, toPosition: newPosition,
+          changedAt: serverTimestamp(), operator: auth.currentUser?.email || ""
+        });
+      }
       await batch.commit();
       detailDialog.close();
     } catch (err) {
-      $("moveMessage").textContent = `変更エラー：${err.code || err.message}`;
-    }
+      $("moveMessage").textContent = `保存エラー：${err.code || err.message}`;
+    } finally { button.disabled = false; }
   };
 
   loadHistory(v.id);
@@ -670,4 +673,14 @@ async function loadHistory(vehicleId) {
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js").catch(console.error);
+}
+
+function confirmDuplicate() {
+  const dialog = $("duplicateDialog");
+  if (dialog.open) return Promise.resolve(false);
+  return new Promise(resolve => {
+    dialog.returnValue = "back";
+    dialog.addEventListener("close", () => resolve(dialog.returnValue === "save"), { once: true });
+    dialog.showModal();
+  });
 }

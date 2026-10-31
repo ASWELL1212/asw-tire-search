@@ -136,7 +136,7 @@ registerForm.addEventListener("submit", async (e) => {
   const column = Number($("regColumn").value);
   const position = Number($("regPosition").value);
   const duplicatePlace = vehicles.some(v => v.active !== false && Number(v.column) === column && Number(v.position) === position);
-  if (duplicatePlace && !await confirmDuplicate()) return;
+  if (duplicatePlace) warnDuplicate();
   try {
     const vehicleRef = doc(collection(db, "vehicles"));
     await setDoc(vehicleRef, {
@@ -572,7 +572,7 @@ function openDetail(id) {
     try {
       const occupied = vehicles.some(other => other.id !== v.id && other.active !== false &&
         Number(other.column) === newColumn && Number(other.position) === newPosition);
-      if (occupied && !await confirmDuplicate()) return;
+      if (occupied) warnDuplicate();
       if (!Object.keys(changes).length) { detailDialog.close(); return; }
       const batch = writeBatch(db);
       batch.update(doc(db, "vehicles", v.id), { ...changes, updatedAt: serverTimestamp() });
@@ -675,12 +675,6 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js").catch(console.error);
 }
 
-function confirmDuplicate() {
-  const dialog = $("duplicateDialog");
-  if (dialog.open) return Promise.resolve(false);
-  return new Promise(resolve => {
-    dialog.returnValue = "back";
-    dialog.addEventListener("close", () => resolve(dialog.returnValue === "save"), { once: true });
-    dialog.showModal();
-  });
+function warnDuplicate() {
+  alert("この保管場所には他のタイヤも登録されています");
 }

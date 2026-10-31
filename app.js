@@ -318,9 +318,9 @@ onAuthStateChanged(auth, (user) => {
 function subscribeVehicles() {
   loading.classList.remove("hidden");
   unsubscribe = onSnapshot(collection(db, "vehicles"), (snap) => {
-    vehicles = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+    vehicles = snap.docs.map(d => ({ ...d.data(), id: d.id })).filter(v => v.deleted !== true);
     loading.classList.add("hidden");
-    setupCard.classList.toggle("hidden", vehicles.length > 0);
+    setupCard.classList.toggle("hidden", snap.docs.length > 0);
     updateCounts();
     render();
     if (warehouseMapDialog.open) renderWarehouseMap();
@@ -449,7 +449,8 @@ function openDetail(id) {
         <button type="button" class="action active" id="saveMoveBtn">保存</button>
         <button type="button" class="action" id="cancelEditBtn">キャンセル</button>
       </div>
-      <div id="moveMessage" class="message"></div>
+      <button type="button" class="action outbound" id="deleteVehicleBtn">この車両を削除</button>
+      <div id="moveMessage" class="message" role="status"></div>
     </section>
 
     <div class="switch-row">
@@ -507,6 +508,25 @@ function openDetail(id) {
   $("editVehicle").value = v.vehicle ?? "";
   $("editNumber").value = v.number ?? "";
   $("cancelEditBtn").onclick = () => detailDialog.close();
+  $("deleteVehicleBtn").onclick = async () => {
+    const button = $("deleteVehicleBtn");
+    if (button.disabled) return;
+    if (!confirm(`${v.name || "このお客様"}の車両（${v.vehicle || ""}／${v.number || ""}）を削除しますか？\n一覧から削除され、この場所に他の車両がなければ空きになります。`)) return;
+    button.disabled = true;
+    $("saveMoveBtn").disabled = true;
+    try {
+      // Retain the customer/tire details and history; exclude this record from all views.
+      await updateDoc(doc(db, "vehicles", v.id), {
+        deleted: true, deletedAt: serverTimestamp(), updatedAt: serverTimestamp()
+      });
+      detailDialog.close();
+    } catch (err) {
+      $("moveMessage").textContent = `削除エラー：${err.code || err.message}`;
+    } finally {
+      button.disabled = false;
+      $("saveMoveBtn").disabled = false;
+    }
+  };
   detailDialog.showModal();
 
   $("leaseToggle").onclick = () => updateVehicle(v.id, { lease: !v.lease });

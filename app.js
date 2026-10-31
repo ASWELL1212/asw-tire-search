@@ -529,8 +529,18 @@ function openDetail(id) {
   };
   detailDialog.showModal();
 
-  $("leaseToggle").onclick = () => updateVehicle(v.id, { lease: !v.lease });
-  $("matoToggle").onclick = () => updateVehicle(v.id, { matoMaintenance: !v.matoMaintenance });
+  let editLease = Boolean(v.lease);
+  let editMato = Boolean(v.matoMaintenance);
+  $("leaseToggle").onclick = () => {
+    editLease = !editLease;
+    $("leaseToggle").classList.toggle("active", editLease);
+    $("leaseToggle").textContent = `${editLease ? "✓ " : ""}リース車`;
+  };
+  $("matoToggle").onclick = () => {
+    editMato = !editMato;
+    $("matoToggle").classList.toggle("active", editMato);
+    $("matoToggle").textContent = `${editMato ? "✓ " : ""}まとメンテ`;
+  };
   $("studlessBtn").onclick = () => updateVehicle(v.id, {
     mountedTire: "studless",
     studlessChangedAt: serverTimestamp(),
@@ -585,9 +595,11 @@ function openDetail(id) {
       return;
     }
     const values = { name: $("editName").value, vehicle: $("editVehicle").value,
-      number: $("editNumber").value, column: newColumn, position: newPosition };
+      number: $("editNumber").value, column: newColumn, position: newPosition,
+      lease: editLease, matoMaintenance: editMato };
     const changes = Object.fromEntries(Object.entries(values).filter(([key, value]) =>
-      key === "column" || key === "position" ? value !== Number(v[key]) : value !== String(v[key] ?? "")));
+      key === "column" || key === "position" ? value !== Number(v[key]) :
+      key === "lease" || key === "matoMaintenance" ? value !== Boolean(v[key]) : value !== String(v[key] ?? "")));
     button.disabled = true;
     try {
       const occupied = vehicles.some(other => other.id !== v.id && other.active !== false &&

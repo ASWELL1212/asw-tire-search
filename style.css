@@ -333,3 +333,24 @@ dialog::backdrop{background:rgba(15,23,42,.56)}
 .map-help{color:#475569;font-size:14px}
 button:disabled{opacity:.6;cursor:wait}
 button:focus-visible,.warehouse-map:focus-visible{outline:3px solid #0891b2;outline-offset:2px}
+
+/* Current mounted tires share the same palette on cards and the warehouse map. */
+.mounted-normal{--tire-bg:#fff3e0;--tire-edge:#c26308;--tire-ink:#713b08}
+.mounted-studless{--tire-bg:#eaf3ff;--tire-edge:#2563b9;--tire-ink:#183f7a}
+.mounted-unset{--tire-bg:#f1f5f9;--tire-edge:#64748b;--tire-ink:#334155}
+.vehicle-card[class*="mounted-"],.map-cell.used[class*="mounted-"]{background:var(--tire-bg);border:2px solid var(--tire-edge);border-left-width:6px}
+.map-cell.used[class*="mounted-"]{color:var(--tire-ink)}
+.legend-box[class*="mounted-"]{background:var(--tire-bg);border:2px solid var(--tire-edge)}
+.tire-legend,.map-legend{display:flex;flex-wrap:wrap;gap:8px 14px;margin:12px 0;font-size:13px;font-weight:800}
+.tire-legend>span{display:flex;align-items:center;gap:6px}
+.map-cell .mounted-caption{font-size:12px;margin-top:6px;font-weight:900}
+.replacement-section{margin:16px 0 0;padding:12px;border:1px solid #94a3b8;border-radius:12px;min-width:0;background:white}
+.replacement-section legend{font-weight:900;padding:0 4px}
+.replacement-help{font-size:13px;line-height:1.6;color:#475569;margin:5px 0}
+.replacement-section select{font:inherit;font-size:16px;width:100%;min-height:48px;border:2px solid #cbd5e1;border-radius:10px;background:#fff;padding:8px;margin-top:6px;color:#0f172a}
+.replacement-section select:focus-visible{outline:3px solid #0891b2;outline-offset:2px}
+.badge.replacement-pending{background:#fff1f2;color:#9f1239;border:1px solid #e11d48}
+.badge.replacement-notified{background:#f0fdf4;color:#166534;border:1px solid #16a34a}
+.map-recommendations{display:grid;gap:4px;margin-top:5px}
+.map-recommendations:empty{display:none}
+.map-recommendations .badge{white-space:normal;font-size:11px;line-height:1.5;border-radius:7px}

@@ -190,10 +190,12 @@ function renderWarehouseMap() {
       const items = occupied.get(`${column}-${position}`) || [];
       html += `<div class="map-slot ${items.length > 1 ? 'duplicate' : ''}"><div class="map-position">${position}番${items.length > 1 ? ' · 重複 '+items.length+'件' : ''}</div>`;
       if (items.length) {
-        html += items.map(vehicle => `<button type="button" class="map-cell used" data-id="${escapeHtml(vehicle.id)}">
+        html += items.map(vehicle => `<button type="button" class="map-cell used ${mountedClass(vehicle)}" data-id="${escapeHtml(vehicle.id)}">
           <span>${escapeHtml(vehicle.name)}</span>
           <small>${escapeHtml(vehicle.vehicle)}</small>
           <small>${escapeHtml(vehicle.number)}</small>
+          <span class="mounted-caption">${mountedLabel(vehicle)}</span>
+          <div class="map-recommendations">${recommendationBadges(vehicle)}</div>
         </button>`).join("");
       } else {
         html += `<button type="button" class="map-cell vacant" data-column="${column}" data-position="${position}"><span>空き</span></button>`;
@@ -385,15 +387,34 @@ function filteredVehicles() {
   }).sort((a,b) => (a.column ?? 99) - (b.column ?? 99) || (a.position ?? 99) - (b.position ?? 99));
 }
 
+function mountedClass(v) {
+  return v.mountedTire === "normal" ? "mounted-normal" :
+    v.mountedTire === "studless" ? "mounted-studless" : "mounted-unset";
+}
+function mountedLabel(v) {
+  return v.mountedTire === "normal" ? "現在：ノーマル" :
+    v.mountedTire === "studless" ? "現在：スタッドレス" : "現在：未設定";
+}
+function recommendationState(value) {
+  return value === "pending" || value === "notified" ? value : "none";
+}
+function recommendationBadges(v) {
+  return [["normalReplacementNotice", "ノーマル"], ["studlessReplacementNotice", "スタッドレス"]]
+    .map(([key,label]) => {
+      const state = recommendationState(v[key]);
+      return state === "none" ? "" : `<span class="badge replacement-${state}">${label}買い替え推奨・${state === "pending" ? "要告知" : "告知済み"}</span>`;
+    }).join("");
+}
 function badgeHtml(v) {
   const out = [];
   if (v.lease) out.push('<span class="badge lease">リース車</span>');
   if (v.matoMaintenance) out.push('<span class="badge mato">まとメンテ</span>');
   if (v.studlessContactedAt) out.push('<span class="badge contacted">冬タイヤ連絡済み</span>');
   if (v.normalContactedAt) out.push('<span class="badge contacted">夏タイヤ連絡済み</span>');
-  if (v.mountedTire === "studless") out.push('<span class="badge studless">スタッドレス交換済み</span>');
-  else if (v.mountedTire === "normal") out.push('<span class="badge normal">ノーマル交換済み</span>');
-  else out.push('<span class="badge unset">交換状態 未設定</span>');
+  if (v.mountedTire === "studless") out.push('<span class="badge studless">現在：スタッドレス</span>');
+  else if (v.mountedTire === "normal") out.push('<span class="badge normal">現在：ノーマル</span>');
+  else out.push('<span class="badge unset">現在：未設定</span>');
+  out.push(recommendationBadges(v));
   return out.join("");
 }
 
@@ -407,7 +428,7 @@ function render() {
   empty.classList.toggle("hidden", items.length !== 0);
   list.classList.toggle("hidden", items.length === 0);
   list.innerHTML = items.map(v => `
-    <button class="vehicle-card" data-id="${escapeHtml(v.id)}">
+    <button class="vehicle-card ${mountedClass(v)}" data-id="${escapeHtml(v.id)}">
       <div class="vehicle-head">
         <div>
           <div class="vehicle-name">${escapeHtml(v.name)}</div>
@@ -444,6 +465,25 @@ function openDetail(id) {
         <label>列<input id="moveColumn" type="number" min="1" max="99" value="${escapeHtml(v.column)}"></label>
         <label>番<input id="movePosition" type="number" min="1" max="999" value="${escapeHtml(v.position)}"></label>
       </div>
+      <fieldset class="replacement-section">
+        <legend>タイヤの買い替え推奨</legend>
+        <p class="replacement-help">摩耗などによるタイヤ自体の交換推奨です。季節の履き替え連絡とは別に管理します。</p>
+        <label>ノーマルタイヤ
+          <select id="normalReplacementNotice">
+            <option value="none">推奨なし</option>
+            <option value="pending">交換推奨・要告知</option>
+            <option value="notified">交換推奨・告知済み</option>
+          </select>
+        </label>
+        <label>スタッドレスタイヤ
+          <select id="studlessReplacementNotice">
+            <option value="none">推奨なし</option>
+            <option value="pending">交換推奨・要告知</option>
+            <option value="notified">交換推奨・告知済み</option>
+          </select>
+        </label>
+        <p class="replacement-help">変更したら下の「保存」を押してください。</p>
+      </fieldset>
       <div class="move-actions">
         <button type="button" class="action" id="suggestMoveBtn">空きを提案</button>
         <button type="button" class="action active" id="saveMoveBtn">保存</button>
@@ -504,6 +544,8 @@ function openDetail(id) {
       <div id="historyList" class="history-list">読み込み中…</div>
     </section>
   `;
+  $("normalReplacementNotice").value = recommendationState(v.normalReplacementNotice);
+  $("studlessReplacementNotice").value = recommendationState(v.studlessReplacementNotice);
   $("editName").value = v.name ?? "";
   $("editVehicle").value = v.vehicle ?? "";
   $("editNumber").value = v.number ?? "";
@@ -600,6 +642,14 @@ function openDetail(id) {
     const changes = Object.fromEntries(Object.entries(values).filter(([key, value]) =>
       key === "column" || key === "position" ? value !== Number(v[key]) :
       key === "lease" || key === "matoMaintenance" ? value !== Boolean(v[key]) : value !== String(v[key] ?? "")));
+    for (const key of ["normalReplacementNotice", "studlessReplacementNotice"]) {
+      const state = $(key).value;
+      if (!["none", "pending", "notified"].includes(state)) {
+        $("moveMessage").textContent = "買い替え推奨の状態を選び直してください。";
+        return;
+      }
+      if (state !== recommendationState(v[key])) changes[key] = state;
+    }
     button.disabled = true;
     try {
       const occupied = vehicles.some(other => other.id !== v.id && other.active !== false &&

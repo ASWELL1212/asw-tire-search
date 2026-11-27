@@ -97,11 +97,16 @@
         </div>
       </section>
 
+      <div class="tire-legend" aria-label="現在装着中のタイヤの色分け">
+        <span><i class="legend-box mounted-normal"></i>ノーマル</span>
+        <span><i class="legend-box mounted-studless"></i>スタッドレス</span>
+        <span><i class="legend-box mounted-unset"></i>未設定</span>
+      </div>
       <section id="loading" class="panel">読み込み中…</section>
       <section id="empty" class="panel hidden">該当する車両がありません</section>
       <section id="list" class="vehicle-list hidden"></section>
 
-      <footer>ASW Tire Manager Ver.3.2.0</footer>
+      <footer>ASW Tire Manager Ver.3.3.0</footer>
     </section>
   </main>
 
@@ -110,7 +115,9 @@
       <button class="dialog-close" value="cancel" aria-label="閉じる">×</button>
       <div class="detail-title">倉庫マップ</div>
       <div class="map-legend">
-        <span><i class="legend-box used"></i>使用中</span>
+        <span><i class="legend-box mounted-normal"></i>ノーマル</span>
+        <span><i class="legend-box mounted-studless"></i>スタッドレス</span>
+        <span><i class="legend-box mounted-unset"></i>未設定</span>
         <span><i class="legend-box vacant"></i>空き</span>
       </div>
       <p class="map-help">左右にスクロールして1〜30列を表示できます。重複位置は各カードを選択して編集できます。</p>

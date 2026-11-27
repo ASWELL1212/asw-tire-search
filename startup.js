@@ -10,7 +10,7 @@
     return;
   }
   message.textContent = 'ログイン機能を読み込み中…';
-  import('./app.js').then(() => {
+  import('./app.js?v=3.3.0').then(() => {
     button.disabled = false;
     message.textContent = '';
   }).catch(() => {
